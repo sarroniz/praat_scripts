@@ -1,79 +1,164 @@
-# This script calculates the duration and intensity of those intervals in the selected tier.
+# This script takes a folder of sound files and for each sound file,
+# it calculates the duration and intensity of those intervals in the selected tier.
 # You can also give the name of a criterion tier and a criterion label:
 # only those segments will be counted that are part of an interval in the
 # criterion tier that has the criterion label. 
-# A TextGrid object has to be selected before running this script in the Object Window.
+# Results will be saved in the same directory as the input source. 
 #
 # This script is distributed under the GNU General Public Licence.
 # Copyright 09.22.2023 Santiago Arroniz
 
-form Calculate the total duration of intervals
-comment Calculate the duration of intervals in tier:
-integer Duration_tier 1
-comment Calculate the intensity at all points in tier:
-integer Intensity_tier 3
-comment Empty intervals will not be measured.
-comment Additional criterion for included intervals: They must be part of intervals in tier number
-integer Criterion_tier 0
-comment that are labeled as:
-sentence Label 
+
+# Setting User Input Form
+
+form Calculate the total duration of intervals and intensity of points
+	comment Calculate the duration of intervals in tier:
+	integer Duration_tier 1
+	comment Calculate the intensity at all points in tier:
+	integer Intensity_tier 3
+	comment Empty intervals will not be measured.
+	word Sound_file_extension .wav
+	comment Additional criterion for included intervals: They must be part of intervals in tier number
+	integer Criterion_tier 0
+	comment that are labeled as:
+	sentence Label
+	comment Duration results CSV file name: 
+	word Results_duration duration_results.csv
+	comment Intensity results CSV file name: 
+	word Results_intensity intensity_results.csv
 endform
 
+
+
+# Looping over the files
+directory$ = chooseDirectory$: "Choose a directory with 'sound_file_extension$'
+... files to analize."
+@getFiles: directory$, sound_file_extension$
+
+# Set counters for duration values
 total_duration = 0
 count = 0
+
+# We print out the file names
+pathDur$ = "'directory$'/'results_duration$'"
+pathInt$ = "'directory$'/'results_intensity$'"
 	
-numberOfIntervals = Get number of intervals... duration_tier
+fileappend "'pathDur$'" File Name,Target,Word,Segment 1,Segment 2,Tonicity,Interval name,Duration
+fileappend "'pathDur$'" 'newline$'
+
+fileappend "'pathInt$'" File Name,Target,Word,Segment 1,Segment 2,Tonicity,Interval name,Intensity
+fileappend "'pathInt$'" 'newline$'
+
 
 # Loop through all intervals in the selected tier:
-for i from 1 to numberOfIntervals
+for j to getFiles.length
+    	soundfile = Read from file: getFiles.files$ [j]
+	soundname$ = selected$ ("Sound")
+	To Intensity... 100 0
+
+	@getTextGrid: getFiles.files$ [j]
+	numberOfIntervals = Get number of intervals... duration_tier
+	numberOfPoints = Get number of points... intensity_tier
 	
-	label1$ = Get label of interval... duration_tier i
-
-	# The next line will make sure that intervals with empty labels are not included:
-	if label1$ <> ""
-
-		start1 = Get starting point... duration_tier i	
-		end1 = Get end point... duration_tier i
-		duration = end1 - start1
-		middle1 = (start1 + end1) / 2
-
-		if criterion_tier > 0
-			criterion = Get interval at time... criterion_tier middle1
-			start2 = Get starting point... criterion_tier criterion
-			end2 = Get end point... criterion_tier criterion
+	for i from 1 to numberOfIntervals
 	
-			label2$ = Get label of interval... criterion_tier criterion
+		label1$ = Get label of interval... duration_tier i
+		@splitstring(soundname$, "-")
+		target$ = splitstring.array$[1]
+		word$ = splitstring.array$[2]
+		segment1$ = splitstring.array$[3]
+		segment2$ = splitstring.array$[4]
+		tonicity$ = splitstring.array$[5]
+
+
+		# The next line will make sure that intervals with empty labels are not included:
+		if label1$ <> ""
+
+			start1 = Get starting point... duration_tier i	
+			end1 = Get end point... duration_tier i
+			duration = end1 - start1
+			middle1 = (start1 + end1) / 2
 			
-			if start2 <= start1 and end2 >= end1 and label2$ = label$
+
+			if criterion_tier > 0
+				criterion = Get interval at time... criterion_tier middle1
+				start2 = Get starting point... criterion_tier criterion
+				end2 = Get end point... criterion_tier criterion
+		
+				label2$ = Get label of interval... criterion_tier criterion
+			
+				if start2 <= start1 and end2 >= end1 and label2$ = label$
+					total_duration = total_duration + duration
+					count = count + 1
+				endif
+			else
 				total_duration = total_duration + duration
-				count = count + 1
+				count = count + 1	
 			endif
-		else
-			total_duration = total_duration + duration
-			count = count + 1	
+			fileappend "'pathDur$'" 'soundname$','target$','word$','segment1$','segment2$','tonicity$','label1$','duration'
+			fileappend "'pathDur$'" 'newline$'
 		endif
-	endif
+	endfor
 
-	label3$ = Get label of interval... intensity_tier i
-	if label3$ <> "" 
+	for i from 1 to numberOfPoints
+		select TextGrid 'soundname$'
+		label3$ = Get label of point... intensity_tier i
 
-		points = Get number of points: tier
-		appendInfoLine: tab$, tab$, "there are ", points, " points." 
-		for point from 1 to points
-			pointName$ = Get label of point: tier, point 
-			time = Get time of point: tier, point
+		# The next line will make sure that intervals with empty labels are not included:
+		if label3$ <> ""
+			onset = Get starting point... 1 'i'
+  			offset = Get end point... 1 'i'
+			select Intensity 'soundname$'
+			max_int = Get maximum... onset offset Parabolic
+			fileappend "'pathInt$'" 'soundname$','target$','word$','segment1$','segment2$','tonicity$','label3$','max_int'
+			fileappend "'pathInt$'" 'newline$'
+		endif
+	endfor		
 
-			appendInfoLine: pointName$, tab$, time 
-		endfor		
-	endif
+    removeObject: soundfile
+
 endfor
 
-# Print the results to the Info window
-if criterion_tier > 0
-	printline Only those intervals that are part of another interval in tier 'criterion_tier'
-	printline having the label "'label$'" were included.
-endif
+# Show a message indicating the completion of the analysis
+printline "Analysis completed. Results are saved in the specified CSV files."
 
-duration_in_minutes = 'total_duration' / 60
-printline
-printline Total duration of the 'count' intervals (fulfilling the criteria) is 'total_duration' seconds. 
+##########################################################################
+
+# Setting Procedures
+
+procedure getFiles: .dir$, .ext$
+    .obj = Create Strings as file list: "files", .dir$ + "/*" + .ext$
+    .length = Get number of strings
+
+    for .i to .length
+        .fname$ = Get string: .i
+        .files$ [.i] = .dir$ + "/" + .fname$
+
+    endfor
+
+    removeObject: .obj
+
+endproc
+
+procedure getTextGrid: .soundfile$
+    .path$ = replace$: .soundfile$, sound_file_extension$, ".TextGrid", 0
+    .textgrid = Read from file: .path$
+
+    endif
+
+endproc
+
+procedure splitstring: .string$, .sep$
+    .strLen = 0
+    repeat
+        .sepIndex = index (.string$, .sep$)
+        if .sepIndex <> 0
+            .value$ = left$ (.string$, .sepIndex - 1)
+            .string$ = mid$ (.string$, .sepIndex + 1, 10000)
+        else
+            .value$ = .string$
+        endif
+        .strLen = .strLen + 1
+        .array$[.strLen] = .value$
+    until .sepIndex = 0
+endproc
