@@ -43,10 +43,10 @@ count = 0
 pathDur$ = "'directory$'/'results_duration$'"
 pathInt$ = "'directory$'/'results_intensity$'"
 	
-fileappend "'pathDur$'" File Name,Target,Word,Segment 1,Segment 2,Tonicity,Interval name,Duration
+fileappend "'pathDur$'" File Name,Target,Word,Segment 1,Segment 2,Segment 3,Tonicity,Interval name,Duration
 fileappend "'pathDur$'" 'newline$'
 
-fileappend "'pathInt$'" File Name,Target,Word,Segment 1,Segment 2,Tonicity,Interval name,Intensity
+fileappend "'pathInt$'" File Name,Target,Word,Segment 1,Segment 2,Segment 3,Tonicity,Interval name,Intensity
 fileappend "'pathInt$'" 'newline$'
 
 
@@ -68,7 +68,8 @@ for j to getFiles.length
 		word$ = splitstring.array$[2]
 		segment1$ = splitstring.array$[3]
 		segment2$ = splitstring.array$[4]
-		tonicity$ = splitstring.array$[5]
+		segment3$ = splitstring.array$[5]
+		tonicity$ = splitstring.array$[6]
 
 
 		# The next line will make sure that intervals with empty labels are not included:
@@ -95,7 +96,7 @@ for j to getFiles.length
 				total_duration = total_duration + duration
 				count = count + 1	
 			endif
-			fileappend "'pathDur$'" 'soundname$','target$','word$','segment1$','segment2$','tonicity$','label1$','duration'
+			fileappend "'pathDur$'" 'soundname$','target$','word$','segment1$','segment2$','segment3$','tonicity$','label1$','duration'
 			fileappend "'pathDur$'" 'newline$'
 		endif
 	endfor
@@ -110,7 +111,7 @@ for j to getFiles.length
   			offset = Get end point... 1 'i'
 			select Intensity 'soundname$'
 			max_int = Get maximum... onset offset Parabolic
-			fileappend "'pathInt$'" 'soundname$','target$','word$','segment1$','segment2$','tonicity$','label3$','max_int'
+			fileappend "'pathInt$'" 'soundname$','target$','word$','segment1$','segment2$','segment3$','tonicity$','label3$','max_int'
 			fileappend "'pathInt$'" 'newline$'
 		endif
 	endfor		
