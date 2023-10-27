@@ -163,3 +163,4 @@ procedure splitstring: .string$, .sep$
         .array$[.strLen] = .value$
     until .sepIndex = 0
 endproc
+# End of the script
